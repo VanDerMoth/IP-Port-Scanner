@@ -446,7 +446,7 @@ class PortScannerGUI:
         
         # Update status and start progress bar
         self.update_status(f"Scanning {target_ip} ports {start_port}-{end_port}...{stealth_msg}")
-        self.progress.config(mode='determinate', value=0)
+        self.progress.config(value=0)
         self.eta_label.config(text="Initializing scan...")
         
         # Run scan in separate thread
