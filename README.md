@@ -10,6 +10,7 @@ A Linux desktop application for scanning ports on a specified IP address to disc
 - 📊 **Service Detection** - Identifies common services running on open ports
 - 🎯 **Flexible Range** - Specify custom port ranges (1-65535)
 - 📝 **Real-time Results** - See open ports as they are discovered
+- 💾 **Export Results** - Save scan results to JSON, CSV, or TXT files for future analysis
 
 ## Requirements
 
@@ -68,6 +69,7 @@ The executable will be created in the `dist/` directory and can be run on any Li
 3. **Start Scan**: Click "Start Scan" to begin scanning
 4. **View Results**: Open ports and their associated services will appear in real-time
 5. **Stop/Clear**: Use "Stop Scan" to halt scanning or "Clear Results" to reset
+6. **Export Results**: Click "Export Results" to save scan results to a file (JSON, CSV, or TXT format)
 
 ## Common Ports Detected
 
@@ -79,6 +81,91 @@ The scanner identifies common services including:
 - Port 5432: PostgreSQL
 - Port 8080: HTTP Proxy
 - And many more...
+
+## Exporting Scan Results
+
+The scanner allows you to export scan results in multiple formats for further analysis or integration with other tools:
+
+### Export Formats
+
+1. **JSON** - Structured data format ideal for programmatic processing
+   - Contains scan metadata (timestamp, duration, target IP, port range)
+   - Results array with port numbers and service names
+   - Easy to parse with any programming language
+
+2. **CSV** - Spreadsheet-compatible format
+   - Includes metadata as comment rows
+   - Port and service columns for easy import into Excel/Sheets
+   - Suitable for data analysis and reporting
+
+3. **TXT** - Human-readable plain text format
+   - Clean, formatted output for documentation
+   - Includes all scan information and results
+   - Easy to read and share
+
+### How to Export
+
+1. Complete a port scan
+2. Click the "Export Results" button
+3. Select your desired format (JSON, CSV, or TXT)
+4. Choose a location and filename
+5. Results are saved with scan metadata including timestamp and duration
+
+### Example Export Formats
+
+**JSON Format:**
+```json
+{
+  "scan_info": {
+    "target_ip": "127.0.0.1",
+    "start_port": 1,
+    "end_port": 1024,
+    "timeout": 0.5,
+    "total_open_ports": 3,
+    "timestamp": "2024-01-15 10:30:45",
+    "scan_duration_seconds": 2.34
+  },
+  "results": [
+    {"port": 22, "service": "SSH"},
+    {"port": 80, "service": "HTTP"},
+    {"port": 443, "service": "HTTPS"}
+  ]
+}
+```
+
+**CSV Format:**
+```csv
+# timestamp,2024-01-15 10:30:45
+# scan_duration_seconds,2.34
+# Target IP,127.0.0.1
+# Port Range,1-1024
+# Total Open Ports,3
+
+Port,Service
+22,SSH
+80,HTTP
+443,HTTPS
+```
+
+**TXT Format:**
+```
+IP Port Scanner - Scan Results
+============================================================
+
+Scan Metadata:
+  timestamp: 2024-01-15 10:30:45
+  scan_duration_seconds: 2.34
+
+Target IP: 127.0.0.1
+Port Range: 1-1024
+Total Open Ports: 3
+
+Open Ports:
+------------------------------------------------------------
+Port    22: OPEN - SSH
+Port    80: OPEN - HTTP
+Port   443: OPEN - HTTPS
+```
 
 ## Makefile Commands
 

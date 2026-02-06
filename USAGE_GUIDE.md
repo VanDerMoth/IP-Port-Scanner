@@ -13,7 +13,7 @@
 │                                                                  │
 │  End Port:            [1024______________________________]      │
 │                                                                  │
-│         [Start Scan]    [Stop Scan]    [Clear Results]          │
+│   [Start Scan] [Stop Scan] [Clear Results] [Export Results]     │
 │                                                                  │
 │  [████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░]            │
 │                                                                  │
@@ -75,6 +75,7 @@ Click **"Start Scan"** button to begin scanning:
 
 - **Stop Scan**: Halts the current scan operation
 - **Clear Results**: Clears the results display area
+- **Export Results**: Saves scan results to a file (JSON, CSV, or TXT format)
 - **Start Scan**: Disabled during active scan
 
 ### 5. View Results
@@ -91,6 +92,29 @@ Port 80: OPEN - HTTP
 Port 443: OPEN - HTTPS
 Port 3306: OPEN - MySQL
 ```
+
+### 6. Export Results
+
+After completing a scan:
+1. Click the **"Export Results"** button
+2. Choose the desired format:
+   - **JSON** - For programmatic processing and integration with other tools
+   - **CSV** - For spreadsheet import and data analysis
+   - **TXT** - For documentation and human-readable logs
+3. Select a location and filename
+4. The file will include:
+   - Scan metadata (timestamp, duration)
+   - Target IP and port range
+   - All discovered open ports with services
+   - Total count of open ports
+
+Example exported files can be used for:
+- Documentation and reporting
+- Historical comparison of scans
+- Integration with security tools
+- Data analysis in spreadsheets
+- Automated processing with scripts
+
 
 ## Build Instructions
 
@@ -130,6 +154,12 @@ make clean     # Remove build artifacts
 - **Timeout**: Configurable (default: 0.5s per port)
 - **Threading**: Multi-threaded (default: 100 threads)
 - **Speed**: Fast scanning with concurrent connections
+
+### Export Formats
+- **JSON**: Structured format with full metadata and results
+- **CSV**: Spreadsheet-compatible with metadata as comments
+- **TXT**: Human-readable plain text format
+- **Metadata**: Includes timestamp, scan duration, target info
 
 ### Service Detection
 Identifies common services on standard ports:
