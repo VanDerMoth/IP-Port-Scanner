@@ -7,6 +7,7 @@ import socket
 import threading
 import time
 import sys
+import os
 
 # Test the PortScanner class without GUI
 def test_port_scanner():
@@ -15,30 +16,31 @@ def test_port_scanner():
     print("IP Port Scanner - Core Functionality Tests")
     print("=" * 60)
     
-    # Import only the scanner class
-    sys.path.insert(0, '/home/runner/work/IP-Port-Scanner/IP-Port-Scanner')
+    # Add the script directory to path for imports
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, script_dir)
     
-    # Read and exec just the scanner class
-    with open('/home/runner/work/IP-Port-Scanner/IP-Port-Scanner/port_scanner.py', 'r') as f:
+    # Import scanner components by reading only what's needed
+    scanner_file = os.path.join(script_dir, 'port_scanner.py')
+    with open(scanner_file, 'r') as f:
         lines = f.readlines()
     
-    # Extract just the necessary parts (up to GUI class)
+    # Extract non-GUI code (imports, constants, PortScanner class)
     scanner_code = []
-    in_scanner_class = False
     gui_started = False
     
     for line in lines:
+        # Skip GUI-related imports
         if 'import tkinter' in line or 'from tkinter' in line:
-            continue  # Skip tkinter imports
-        if 'class PortScanner:' in line:
-            in_scanner_class = True
+            continue
+        # Stop before GUI class definition
         if 'class PortScannerGUI:' in line:
             gui_started = True
             break
         if not gui_started:
             scanner_code.append(line)
     
-    # Execute the scanner code
+    # Load the scanner code into globals
     exec(''.join(scanner_code), globals())
     
     print("\n1. Testing IP validation...")
