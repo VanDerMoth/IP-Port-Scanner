@@ -52,6 +52,8 @@ class PortScanner:
         self.open_ports = []
         self.queue = Queue()
         self.lock = threading.Lock()
+        self.ports_scanned = 0
+        self.total_ports = 0
         
     def scan_port(self, port):
         """Scan a single port"""
@@ -76,21 +78,30 @@ class PortScanner:
             return None
         return None
     
-    def worker(self, callback=None):
+    def worker(self, callback=None, progress_callback=None):
         """Worker thread for scanning ports"""
         while not self.queue.empty():
             port = self.queue.get()
             result = self.scan_port(port)
             if result and callback:
                 callback(result[0], result[1])
+            
+            # Update progress counter
+            with self.lock:
+                self.ports_scanned += 1
+                if progress_callback:
+                    progress_callback(self.ports_scanned, self.total_ports)
+            
             self.queue.task_done()
     
-    def scan(self, num_threads=200, callback=None):
+    def scan(self, num_threads=200, callback=None, progress_callback=None):
         """Main scanning function with multi-threading"""
         self.open_ports = []
+        self.ports_scanned = 0
         
         # Create list of ports to scan
         ports = list(range(self.start_port, self.end_port + 1))
+        self.total_ports = len(ports)
         
         # Randomize port order for stealth if enabled
         if self.randomize:
@@ -103,7 +114,7 @@ class PortScanner:
         # Start worker threads
         threads = []
         for _ in range(min(num_threads, self.queue.qsize())):
-            thread = threading.Thread(target=self.worker, args=(callback,))
+            thread = threading.Thread(target=self.worker, args=(callback, progress_callback))
             thread.daemon = True
             thread.start()
             threads.append(thread)
@@ -213,6 +224,8 @@ class PortScannerGUI:
         self.scanner = None
         self.scan_start_time = None
         self.scan_duration = None
+        self.total_ports = 0
+        self.ports_scanned = 0
         
         self.create_widgets()
         
@@ -285,9 +298,17 @@ class PortScannerGUI:
         self.export_button = ttk.Button(button_frame, text="Export Results", command=self.export_results)
         self.export_button.grid(row=0, column=3, padx=5)
         
-        # Progress bar
-        self.progress = ttk.Progressbar(main_frame, mode='indeterminate')
-        self.progress.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5, padx=5)
+        # Progress bar and ETA frame
+        progress_frame = ttk.Frame(main_frame)
+        progress_frame.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5, padx=5)
+        progress_frame.columnconfigure(0, weight=1)
+        
+        self.progress = ttk.Progressbar(progress_frame, mode='determinate')
+        self.progress.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        
+        # ETA label
+        self.eta_label = ttk.Label(progress_frame, text="", anchor=tk.W)
+        self.eta_label.grid(row=1, column=0, sticky=(tk.W, tk.E))
         
         # Results area
         ttk.Label(main_frame, text="Scan Results:").grid(row=6, column=0, columnspan=2, sticky=tk.W, pady=(10, 5))
@@ -324,9 +345,48 @@ class PortScannerGUI:
         self.results_text.insert(tk.END, f"Port {port}: OPEN - {service}\n")
         self.results_text.see(tk.END)
     
+    def update_progress(self, ports_scanned, total_ports):
+        """Update progress bar and ETA"""
+        if total_ports == 0:
+            return
+        
+        self.ports_scanned = ports_scanned
+        self.total_ports = total_ports
+        
+        # Calculate progress percentage
+        progress_percent = (ports_scanned / total_ports) * 100
+        
+        # Update progress bar
+        self.root.after(0, lambda: self.progress.config(value=progress_percent))
+        
+        # Calculate ETA
+        if ports_scanned > 0 and self.scan_start_time:
+            elapsed_time = (datetime.now() - self.scan_start_time).total_seconds()
+            avg_time_per_port = elapsed_time / ports_scanned
+            remaining_ports = total_ports - ports_scanned
+            estimated_remaining_time = avg_time_per_port * remaining_ports
+            
+            # Format ETA
+            if estimated_remaining_time < 60:
+                eta_str = f"{int(estimated_remaining_time)}s"
+            elif estimated_remaining_time < 3600:
+                minutes = int(estimated_remaining_time / 60)
+                seconds = int(estimated_remaining_time % 60)
+                eta_str = f"{minutes}m {seconds}s"
+            else:
+                hours = int(estimated_remaining_time / 3600)
+                minutes = int((estimated_remaining_time % 3600) / 60)
+                eta_str = f"{hours}h {minutes}m"
+            
+            # Update ETA label
+            status_text = f"Progress: {ports_scanned}/{total_ports} ports ({progress_percent:.1f}%) | ETA: {eta_str}"
+            self.root.after(0, lambda: self.eta_label.config(text=status_text))
+    
     def clear_results(self):
         """Clear results text area"""
         self.results_text.delete(1.0, tk.END)
+        self.eta_label.config(text="")
+        self.progress.config(value=0)
         self.update_status("Results cleared")
     
     def start_scan(self):
@@ -386,7 +446,8 @@ class PortScannerGUI:
         
         # Update status and start progress bar
         self.update_status(f"Scanning {target_ip} ports {start_port}-{end_port}...{stealth_msg}")
-        self.progress.start()
+        self.progress.config(mode='determinate', value=0)
+        self.eta_label.config(text="Initializing scan...")
         
         # Run scan in separate thread
         scan_thread = threading.Thread(target=self.run_scan, args=(target_ip, start_port, end_port, scan_delay))
@@ -397,9 +458,11 @@ class PortScannerGUI:
         """Run the actual scan"""
         try:
             self.scan_start_time = datetime.now()
+            self.ports_scanned = 0
+            self.total_ports = end_port - start_port + 1
             randomize = self.randomize_var.get()
             self.scanner = PortScanner(target_ip, start_port, end_port, timeout=0.3, randomize=randomize, scan_delay=scan_delay)
-            results = self.scanner.scan(num_threads=200, callback=self.append_result)
+            results = self.scanner.scan(num_threads=200, callback=self.append_result, progress_callback=self.update_progress)
             
             if self.scanning:
                 self.scan_duration = (datetime.now() - self.scan_start_time).total_seconds()
@@ -409,7 +472,8 @@ class PortScannerGUI:
     
     def scan_complete(self, num_open_ports):
         """Handle scan completion"""
-        self.progress.stop()
+        self.progress.config(value=100)
+        self.eta_label.config(text=f"Scan complete! Scanned {self.total_ports} ports in {self.scan_duration:.2f}s")
         self.scan_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
         self.scanning = False
@@ -422,7 +486,8 @@ class PortScannerGUI:
     
     def scan_error(self, error_msg):
         """Handle scan errors"""
-        self.progress.stop()
+        self.progress.config(value=0)
+        self.eta_label.config(text="")
         self.scan_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
         self.scanning = False
@@ -432,7 +497,8 @@ class PortScannerGUI:
     def stop_scan(self):
         """Stop the scanning process"""
         self.scanning = False
-        self.progress.stop()
+        self.progress.config(value=0)
+        self.eta_label.config(text="")
         self.scan_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
         self.update_status("Scan stopped by user")
