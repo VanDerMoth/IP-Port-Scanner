@@ -21,7 +21,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.11'
         
     - name: Install dependencies
       run: |
@@ -44,7 +44,10 @@ jobs:
         path: dist/ip-port-scanner
         retention-days: 30
         
-    - name: Check executable
+    - name: Verify executable
       run: |
-        ls -lh dist/
+        test -f dist/ip-port-scanner || { echo "Executable not found!"; exit 1; }
+        test -x dist/ip-port-scanner || { echo "Executable is not executable!"; exit 1; }
+        ls -lh dist/ip-port-scanner
         file dist/ip-port-scanner
+        echo "✓ Executable built successfully"
