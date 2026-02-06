@@ -12,6 +12,8 @@ import re
 import json
 import csv
 from datetime import datetime
+import random
+import time
 
 # Common ports and their associated services
 COMMON_SERVICES = {
@@ -40,17 +42,23 @@ COMMON_SERVICES = {
 class PortScanner:
     """Core port scanning functionality"""
     
-    def __init__(self, target_ip, start_port, end_port, timeout=1):
+    def __init__(self, target_ip, start_port, end_port, timeout=0.3, randomize=False, scan_delay=0):
         self.target_ip = target_ip
         self.start_port = start_port
         self.end_port = end_port
         self.timeout = timeout
+        self.randomize = randomize
+        self.scan_delay = scan_delay
         self.open_ports = []
         self.queue = Queue()
         self.lock = threading.Lock()
         
     def scan_port(self, port):
         """Scan a single port"""
+        # Add scan delay for stealth if configured
+        if self.scan_delay > 0:
+            time.sleep(self.scan_delay)
+        
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(self.timeout)
@@ -77,12 +85,19 @@ class PortScanner:
                 callback(result[0], result[1])
             self.queue.task_done()
     
-    def scan(self, num_threads=100, callback=None):
+    def scan(self, num_threads=200, callback=None):
         """Main scanning function with multi-threading"""
         self.open_ports = []
         
+        # Create list of ports to scan
+        ports = list(range(self.start_port, self.end_port + 1))
+        
+        # Randomize port order for stealth if enabled
+        if self.randomize:
+            random.shuffle(ports)
+        
         # Fill the queue with ports to scan
-        for port in range(self.start_port, self.end_port + 1):
+        for port in ports:
             self.queue.put(port)
         
         # Start worker threads
@@ -191,7 +206,7 @@ class PortScannerGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("IP Port Scanner")
-        self.root.geometry("700x600")
+        self.root.geometry("700x700")
         self.root.resizable(True, True)
         
         self.scanning = False
@@ -231,9 +246,32 @@ class PortScannerGUI:
         self.end_port_entry.grid(row=2, column=1, sticky=(tk.W, tk.E), pady=5, padx=5)
         self.end_port_entry.insert(0, "1024")
         
+        # Stealth options frame
+        stealth_frame = ttk.LabelFrame(main_frame, text="Stealth Options", padding="10")
+        stealth_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10, padx=5)
+        
+        # Randomize scan order
+        self.randomize_var = tk.BooleanVar(value=False)
+        self.randomize_check = ttk.Checkbutton(
+            stealth_frame, 
+            text="Randomize port scan order", 
+            variable=self.randomize_var
+        )
+        self.randomize_check.grid(row=0, column=0, sticky=tk.W, pady=2)
+        
+        # Scan delay
+        delay_frame = ttk.Frame(stealth_frame)
+        delay_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=2)
+        
+        ttk.Label(delay_frame, text="Scan delay (seconds):").pack(side=tk.LEFT, padx=(0, 5))
+        self.delay_entry = ttk.Entry(delay_frame, width=10)
+        self.delay_entry.pack(side=tk.LEFT)
+        self.delay_entry.insert(0, "0")
+        ttk.Label(delay_frame, text="(0 = no delay, >0 = stealth mode)").pack(side=tk.LEFT, padx=(5, 0))
+        
         # Buttons frame
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=3, column=0, columnspan=2, pady=10)
+        button_frame.grid(row=4, column=0, columnspan=2, pady=10)
         
         self.scan_button = ttk.Button(button_frame, text="Start Scan", command=self.start_scan)
         self.scan_button.grid(row=0, column=0, padx=5)
@@ -249,17 +287,17 @@ class PortScannerGUI:
         
         # Progress bar
         self.progress = ttk.Progressbar(main_frame, mode='indeterminate')
-        self.progress.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5, padx=5)
+        self.progress.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5, padx=5)
         
         # Results area
-        ttk.Label(main_frame, text="Scan Results:").grid(row=5, column=0, columnspan=2, sticky=tk.W, pady=(10, 5))
+        ttk.Label(main_frame, text="Scan Results:").grid(row=6, column=0, columnspan=2, sticky=tk.W, pady=(10, 5))
         
         self.results_text = scrolledtext.ScrolledText(main_frame, width=80, height=20, wrap=tk.WORD)
-        self.results_text.grid(row=6, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5, padx=5)
+        self.results_text.grid(row=7, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5, padx=5)
         
         # Status bar
         self.status_label = ttk.Label(main_frame, text="Ready to scan", relief=tk.SUNKEN, anchor=tk.W)
-        self.status_label.grid(row=7, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
+        self.status_label.grid(row=8, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
         
     def validate_ip(self, ip):
         """Validate IP address format"""
@@ -316,6 +354,17 @@ class PortScannerGUI:
             messagebox.showerror("Invalid Range", "Start port must be less than or equal to end port")
             return
         
+        # Validate scan delay
+        scan_delay = 0
+        try:
+            scan_delay = float(self.delay_entry.get().strip())
+            if scan_delay < 0:
+                messagebox.showerror("Invalid Delay", "Scan delay must be 0 or greater")
+                return
+        except ValueError:
+            messagebox.showerror("Invalid Delay", "Scan delay must be a valid number")
+            return
+        
         # Disable scan button and enable stop button
         self.scan_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
@@ -324,21 +373,33 @@ class PortScannerGUI:
         # Clear previous results
         self.clear_results()
         
+        # Show stealth mode status if enabled
+        stealth_mode = self.randomize_var.get() or scan_delay > 0
+        stealth_msg = ""
+        if stealth_mode:
+            features = []
+            if self.randomize_var.get():
+                features.append("randomized order")
+            if scan_delay > 0:
+                features.append(f"{scan_delay}s delay")
+            stealth_msg = f" [Stealth: {', '.join(features)}]"
+        
         # Update status and start progress bar
-        self.update_status(f"Scanning {target_ip} ports {start_port}-{end_port}...")
+        self.update_status(f"Scanning {target_ip} ports {start_port}-{end_port}...{stealth_msg}")
         self.progress.start()
         
         # Run scan in separate thread
-        scan_thread = threading.Thread(target=self.run_scan, args=(target_ip, start_port, end_port))
+        scan_thread = threading.Thread(target=self.run_scan, args=(target_ip, start_port, end_port, scan_delay))
         scan_thread.daemon = True
         scan_thread.start()
     
-    def run_scan(self, target_ip, start_port, end_port):
+    def run_scan(self, target_ip, start_port, end_port, scan_delay=0):
         """Run the actual scan"""
         try:
             self.scan_start_time = datetime.now()
-            self.scanner = PortScanner(target_ip, start_port, end_port, timeout=0.5)
-            results = self.scanner.scan(num_threads=100, callback=self.append_result)
+            randomize = self.randomize_var.get()
+            self.scanner = PortScanner(target_ip, start_port, end_port, timeout=0.3, randomize=randomize, scan_delay=scan_delay)
+            results = self.scanner.scan(num_threads=200, callback=self.append_result)
             
             if self.scanning:
                 self.scan_duration = (datetime.now() - self.scan_start_time).total_seconds()
