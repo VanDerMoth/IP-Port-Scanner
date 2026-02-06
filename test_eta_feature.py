@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for ETA (Estimated Time to Completion) feature
+Test script for ETC (Estimated Time to Completion) feature
 """
 
 import socket
@@ -10,9 +10,9 @@ import sys
 import os
 
 def test_eta_feature():
-    """Test the ETA progress tracking functionality"""
+    """Test the ETC (Estimated Time to Completion) progress tracking functionality"""
     print("=" * 60)
-    print("IP Port Scanner - ETA Feature Tests")
+    print("IP Port Scanner - ETC Feature Tests")
     print("=" * 60)
     
     # Add the script directory to path for imports
@@ -108,8 +108,8 @@ def test_eta_feature():
             server_socket.close()
             print(f"\n  Closed test server")
     
-    print("\n3. Testing ETA calculation simulation...")
-    # Simulate ETA calculation
+    print("\n3. Testing ETC calculation simulation...")
+    # Simulate ETC calculation
     total_ports = 1000
     ports_scanned = 250
     elapsed_time = 10.0  # seconds
@@ -125,7 +125,7 @@ def test_eta_feature():
         print(f"  Average time per port: {avg_time_per_port:.4f}s")
         print(f"  Estimated remaining time: {estimated_remaining_time:.2f}s")
         
-        # Format ETA
+        # Format ETC
         if estimated_remaining_time < 60:
             eta_str = f"{int(estimated_remaining_time)}s"
         elif estimated_remaining_time < 3600:
@@ -137,7 +137,7 @@ def test_eta_feature():
             minutes = int((estimated_remaining_time % 3600) / 60)
             eta_str = f"{hours}h {minutes}m"
         
-        print(f"  ✓ Formatted ETA: {eta_str}")
+        print(f"  ✓ Formatted ETC: {eta_str}")
         
         # Test different time formats
         test_times = [30, 90, 150, 3700]
@@ -156,7 +156,7 @@ def test_eta_feature():
             print(f"    {test_time}s -> {formatted}")
     
     print("\n" + "=" * 60)
-    print("ETA feature tests completed!")
+    print("ETC feature tests completed!")
     print("=" * 60)
 
 if __name__ == "__main__":

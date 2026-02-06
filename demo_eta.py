@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Demo script to test the ETA feature in the GUI
+Demo script to test the ETC (Estimated Time to Completion) feature in the GUI
 This script simulates scanning with a visual display of progress
 """
 
@@ -37,11 +37,11 @@ def stop_test_servers(servers):
             pass
 
 def demo_eta_feature():
-    """Demonstrate the ETA feature"""
+    """Demonstrate the ETC (Estimated Time to Completion) feature"""
     print("=" * 60)
-    print("IP Port Scanner - ETA Feature Demo")
+    print("IP Port Scanner - ETC Feature Demo")
     print("=" * 60)
-    print("\nThis demo shows how the ETA feature works.")
+    print("\nThis demo shows how the ETC feature works.")
     print("It will scan a range of ports and display progress updates.")
     print()
     
@@ -115,12 +115,12 @@ def demo_eta_feature():
     
     print("\n" + "=" * 60)
     print("Demo completed!")
-    print("\nTo see the ETA feature in the GUI:")
+    print("\nTo see the ETC feature in the GUI:")
     print("1. Run: python3 port_scanner.py")
     print("2. Set target IP: 127.0.0.1")
     print("3. Set port range (e.g., 1-10000 for longer scan)")
     print("4. Click 'Start Scan'")
-    print("5. Watch the progress bar and ETA update in real-time!")
+    print("5. Watch the progress bar and ETC update in real-time!")
     print("=" * 60)
 
 if __name__ == "__main__":
